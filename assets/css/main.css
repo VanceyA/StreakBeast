@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+    @apply bg-gray-950 text-gray-100;
+  }
+  
+  body {
+    @apply min-h-screen;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+  
+  h1 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+  }
+  
+  h2 {
+    @apply text-2xl md:text-3xl;
+  }
+  
+  h3 {
+    @apply text-xl md:text-2xl;
+  }
+
+  a {
+    @apply text-brand-500 hover:text-brand-400 transition-colors;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply rounded-lg px-4 py-2 font-semibold transition-all duration-200 
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900;
+  }
+  
+  .btn-primary {
+    @apply btn bg-brand-500 text-white hover:bg-brand-400 focus:ring-brand-500;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-gray-800 text-white hover:bg-gray-700 focus:ring-gray-700;
+  }
+  
+  .btn-danger {
+    @apply btn bg-red-500 text-white hover:bg-red-400 focus:ring-red-500;
+  }
+  
+  .btn-success {
+    @apply btn bg-green-500 text-white hover:bg-green-400 focus:ring-green-500;
+  }
+
+  .card {
+    @apply bg-gray-900 rounded-xl p-6 shadow-lg border border-gray-800;
+  }
+  
+  .form-input {
+    @apply block w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 
+           text-gray-200 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
+  }
+  
+  .form-label {
+    @apply mb-2 block text-sm font-semibold text-gray-300;
+  }
+  
+  .form-error {
+    @apply mt-1 text-sm text-red-400;
+  }
+
+  .streak-counter {
+    @apply flex items-center justify-center text-2xl font-bold;
+  }
+  
+  .fire-icon {
+    @apply text-orange-500;
+  }
+}
+
+.page-enter-active,
+.page-leave-active {
+  transition: all 0.25s;
+}
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease-out;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-600;
+}
