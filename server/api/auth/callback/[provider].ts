@@ -21,7 +21,16 @@ export default defineEventHandler(async (event) => {
   
   try {
     const config = oauthProviders[provider]
-    const redirectUri = `${process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/callback/${provider}`
+    
+    // Get the request host and protocol
+    const host = getRequestHost(event) || 'localhost:3000'
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+    
+    // Construct the redirect URI using the current host
+    const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || `${protocol}://${host}`
+    const redirectUri = `${siteUrl}/api/auth/callback/${provider}`
+    
+    console.log(`OAuth callback for ${provider} with redirect URI: ${redirectUri}`)
     
     // Exchange code for tokens
     const tokenResponse = await fetch(config.tokenUrl, {
