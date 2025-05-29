@@ -5,7 +5,9 @@ export default {
     scope: 'https://www.googleapis.com/auth/youtube.readonly',
     authUrl: 'https://accounts.google.com/o/oauth2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    apiBase: 'https://www.googleapis.com/youtube/v3'
+    apiBase: 'https://www.googleapis.com/youtube/v3',
+    userInfoEndpoint: 'channels',
+    userInfoParams: 'part=snippet&mine=true'
   },
   instagram: {
     clientId: process.env.INSTAGRAM_CLIENT_ID,

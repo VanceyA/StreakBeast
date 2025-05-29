@@ -16,10 +16,27 @@ export default defineEventHandler(async (event) => {
     // Get Supabase client with SERVICE ROLE (admin) privileges
     const adminClient = await serverSupabaseServiceRole(event)
     
+    // Check if the category column exists in the achievements table
+    const { data: columnInfo, error: columnError } = await adminClient
+      .rpc('check_column_exists', { 
+        table_name: 'achievements',
+        column_name: 'category'
+      })
+    
+    // If there's an error or the column doesn't exist, we'll need to handle it
+    const categoryExists = columnInfo === true
+    console.log('Category column exists:', categoryExists)
+    
     // Fetch all achievement definitions first
-    const { data: achievements, error: achievementsError } = await adminClient
+    let achievementsQuery = adminClient
       .from('achievements')
-      .select('*')
+    
+    // Only select the category column if it exists
+    const { data: achievements, error: achievementsError } = await achievementsQuery.select(
+      categoryExists 
+        ? '*' 
+        : 'id, name, description, icon, trigger_type, trigger_value, created_at'
+    )
     
     if (achievementsError) {
       console.error('Error fetching achievements:', achievementsError)

@@ -33,6 +33,7 @@ export default defineEventHandler(async (event) => {
     console.log(`OAuth callback for ${provider} with redirect URI: ${redirectUri}`)
     
     // Exchange code for tokens
+    console.log(`Exchanging code for tokens with ${config.tokenUrl}`)
     const tokenResponse = await fetch(config.tokenUrl, {
       method: 'POST',
       headers: {
@@ -42,12 +43,28 @@ export default defineEventHandler(async (event) => {
         client_id: config.clientId,
         client_secret: config.clientSecret,
         grant_type: 'authorization_code',
-        code: code,
+        code: code.toString(),
         redirect_uri: redirectUri
       })
     })
     
-    const tokenData = await tokenResponse.json()
+    // Check if the response is valid
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text()
+      console.error(`Token response error (${tokenResponse.status}):`, errorText)
+      return sendRedirect(event, `/dashboard?error=token_error&status=${tokenResponse.status}`)
+    }
+    
+    // Try to parse the response as JSON
+    let tokenData
+    try {
+      const responseText = await tokenResponse.text()
+      console.log('Token response:', responseText.substring(0, 100) + '...')
+      tokenData = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error('Error parsing token response:', parseError)
+      return sendRedirect(event, `/dashboard?error=invalid_token_response`)
+    }
     
     if (tokenData.error) {
       console.error('Token error:', tokenData.error)
@@ -55,13 +72,55 @@ export default defineEventHandler(async (event) => {
     }
     
     // Get user info from the provider
-    const userInfoResponse = await fetch(`${config.apiBase}/me`, {
-      headers: {
+    let userInfo
+    try {
+      let userInfoUrl
+      let headers = {
         'Authorization': `Bearer ${tokenData.access_token}`
       }
-    })
-    
-    const userInfo = await userInfoResponse.json()
+      
+      // Handle provider-specific user info endpoints
+      if (provider === 'youtube') {
+        userInfoUrl = `${config.apiBase}/${config.userInfoEndpoint}?${config.userInfoParams}`
+        console.log(`Fetching YouTube user info from ${userInfoUrl}`)
+      } else {
+        userInfoUrl = `${config.apiBase}/me`
+        console.log(`Fetching user info from ${userInfoUrl}`)
+      }
+      
+      const userInfoResponse = await fetch(userInfoUrl, { headers })
+      
+      if (!userInfoResponse.ok) {
+        const errorText = await userInfoResponse.text()
+        console.error(`User info error (${userInfoResponse.status}):`, errorText)
+        return sendRedirect(event, `/dashboard?error=user_info_error&status=${userInfoResponse.status}`)
+      }
+      
+      const responseData = await userInfoResponse.json()
+      
+      // Handle provider-specific response formats
+      if (provider === 'youtube') {
+        // YouTube returns a list of channels, we need the first one
+        if (responseData.items && responseData.items.length > 0) {
+          userInfo = {
+            id: responseData.items[0].id,
+            name: responseData.items[0].snippet.title,
+            description: responseData.items[0].snippet.description,
+            thumbnail: responseData.items[0].snippet.thumbnails?.default?.url,
+            originalResponse: responseData
+          }
+        } else {
+          throw new Error('No YouTube channel found')
+        }
+      } else {
+        userInfo = responseData
+      }
+      
+      console.log('User info:', JSON.stringify(userInfo).substring(0, 100) + '...')
+    } catch (userInfoError) {
+      console.error('Error fetching user info:', userInfoError)
+      return sendRedirect(event, `/dashboard?error=user_info_fetch_error`)
+    }
     
     // Get current user from Supabase
     const supabase = await serverSupabaseServiceRole(event)
@@ -71,20 +130,48 @@ export default defineEventHandler(async (event) => {
       return sendRedirect(event, '/login?error=not_authenticated')
     }
     
+    // Extract provider user ID based on the provider
+    let providerUserId = '';
+    switch(provider) {
+      case 'youtube':
+        providerUserId = userInfo.id || '';
+        break;
+      case 'instagram':
+        providerUserId = userInfo.id || userInfo.username || '';
+        break;
+      case 'tiktok':
+        providerUserId = userInfo.open_id || userInfo.id || '';
+        break;
+      case 'twitter':
+        providerUserId = userInfo.id_str || userInfo.id || '';
+        break;
+      case 'linkedin':
+        providerUserId = userInfo.id || '';
+        break;
+      default:
+        providerUserId = userInfo.id || '';
+    }
+    
+    console.log(`Saving connection for user ${user.id} with provider ${provider} and provider_user_id ${providerUserId}`)
+    
     // Store connection in database
+    const connectionData = {
+      user_id: user.id,
+      provider,
+      provider_user_id: providerUserId,
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token || null,
+      expires_at: tokenData.expires_in 
+        ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+        : null,
+      metadata: userInfo
+    }
+    
+    console.log('Connection data:', JSON.stringify(connectionData).substring(0, 100) + '...')
+    
     const { data, error } = await supabase
       .from('social_connections')
-      .upsert({
-        user_id: user.id,
-        provider,
-        provider_user_id: userInfo.id,
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_at: tokenData.expires_in 
-          ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
-          : null,
-        metadata: userInfo
-      }, {
+      .upsert(connectionData, {
         onConflict: 'user_id, provider'
       })
       .select()

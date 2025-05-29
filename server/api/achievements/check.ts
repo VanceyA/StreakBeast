@@ -127,11 +127,29 @@ export default defineEventHandler(async (event) => {
     // Get array of unlocked achievement IDs, defaulting to empty array
     const unlockedIds = (unlockedAchievements || []).map(a => a.achievement_id)
     
-    // Fetch all achievements that haven't been unlocked yet
-    let achievementsQuery = adminClient.from('achievements').select('*')
+    // Check if the category column exists in the achievements table
+    const { data: columnInfo, error: columnError } = await adminClient
+      .rpc('check_column_exists', { 
+        table_name: 'achievements',
+        column_name: 'category'
+      })
     
-    // Filter by category if provided
-    if (category) {
+    // If there's an error or the column doesn't exist, we'll need to handle it
+    const categoryExists = columnInfo === true
+    console.log('Category column exists:', categoryExists)
+    
+    // Fetch all achievements that haven't been unlocked yet
+    let achievementsQuery = adminClient.from('achievements')
+    
+    // Only select columns that exist
+    achievementsQuery = achievementsQuery.select(
+      categoryExists 
+        ? '*' 
+        : 'id, name, description, icon, trigger_type, trigger_value, created_at'
+    )
+    
+    // Filter by category if provided and if the column exists
+    if (category && categoryExists) {
       achievementsQuery = achievementsQuery.eq('category', category)
     }
     
