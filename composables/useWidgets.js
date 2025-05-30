@@ -212,9 +212,24 @@ export const useWidgets = () => {
     return availableWidgets.find(w => w.id === widgetId)
   }
   
+  // Get social connections from the useSocialData composable
+  const { connections } = useSocialData()
+  
   // Get all active widgets with details
   const activeWidgets = computed(() => {
-    return userWidgets.value.map(id => getWidgetById(id)).filter(Boolean)
+    // Map widget IDs to their full widget objects
+    const widgets = userWidgets.value.map(id => getWidgetById(id)).filter(Boolean)
+    
+    // Filter widgets to only include those for connected providers or 'all'
+    return widgets.filter(widget => {
+      // Always include 'all' provider widgets if there are any connections
+      if (widget.provider === 'all') {
+        return connections.value.length > 0
+      }
+      
+      // Only include provider-specific widgets if that provider is connected
+      return connections.value.some(conn => conn.provider === widget.provider)
+    })
   })
   
   // Get available widgets that aren't already on the dashboard

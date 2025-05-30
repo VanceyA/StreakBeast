@@ -37,7 +37,7 @@
         </button>
       </div>
       
-      <div v-else-if="userWidgets.length === 0" class="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center">
+      <div v-else-if="activeWidgets.length === 0" class="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center">
         <p class="text-gray-400 mb-4">Add widgets to customize your dashboard</p>
         <button 
           @click="showWidgetSelector = true" 
@@ -50,9 +50,9 @@
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <AnalyticsWidget 
           v-for="widget in userWidgets" 
-          :key="widget.id" 
+          :key="widget" 
           :widget="widget"
-          @remove="removeWidget(widget.id)"
+          @remove="removeWidget(widget)"
         />
       </div>
     </div>
@@ -73,30 +73,36 @@
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-400 mb-2">Platform</label>
           <div class="grid grid-cols-3 gap-2">
-            <button 
-              v-for="provider in availableProviders" 
-              :key="provider.id"
-              @click="selectedProvider = provider.id"
-              class="p-2 rounded-lg border flex items-center justify-center"
-              :class="selectedProvider === provider.id ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'"
-            >
-              <div class="w-6 h-6 rounded-full flex items-center justify-center" :class="provider.bgClass">
-                <img :src="`/icons/${provider.id}.svg`" :alt="provider.name" class="w-4 h-4">
-              </div>
-              <span class="ml-2">{{ provider.name }}</span>
-            </button>
-            <button 
-              @click="selectedProvider = 'all'"
-              class="p-2 rounded-lg border flex items-center justify-center"
-              :class="selectedProvider === 'all' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'"
-            >
-              <div class="w-6 h-6 rounded-full flex items-center justify-center bg-blue-900/20">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-                </svg>
-              </div>
-              <span class="ml-2">All Platforms</span>
-            </button>
+            <template v-if="availableProviders.length > 0">
+              <button 
+                v-for="provider in availableProviders" 
+                :key="provider.id"
+                @click="selectedProvider = provider.id"
+                class="p-2 rounded-lg border flex items-center justify-center"
+                :class="selectedProvider === provider.id ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'"
+              >
+                <div class="w-6 h-6 rounded-full flex items-center justify-center" :class="provider.bgClass">
+                  <img :src="`/icons/${provider.id}.svg`" :alt="provider.name" class="w-4 h-4">
+                </div>
+                <span class="ml-2">{{ provider.name }}</span>
+              </button>
+              <button 
+                v-if="availableProviders.length > 0"
+                @click="selectedProvider = 'all'"
+                class="p-2 rounded-lg border flex items-center justify-center"
+                :class="selectedProvider === 'all' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'"
+              >
+                <div class="w-6 h-6 rounded-full flex items-center justify-center bg-blue-900/20">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                  </svg>
+                </div>
+                <span class="ml-2">All Platforms</span>
+              </button>
+            </template>
+            <div v-else class="col-span-3 text-center p-4 bg-gray-800 rounded-lg">
+              <p class="text-gray-400">No connected social accounts found. Please connect at least one social account first.</p>
+            </div>
           </div>
         </div>
         
@@ -112,7 +118,9 @@
               :class="selectedWidgetType === type.id ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'"
             >
               <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-800 mr-2">
-                <component :is="type.icon" class="w-5 h-5" />
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="type.icon" />
+                </svg>
               </div>
               <div>
                 <div class="font-medium">{{ type.name }}</div>
@@ -134,7 +142,9 @@
               :class="selectedMetric === metric.id ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'"
             >
               <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-800 mr-2">
-                <component :is="metric.icon" class="w-5 h-5" />
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="metric.icon" />
+                </svg>
               </div>
               <div>
                 <div class="font-medium">{{ metric.name }}</div>
@@ -200,7 +210,7 @@ const { $toast: toast } = useNuxtApp()
 const { connections, loading: socialLoading } = useSocialData()
 
 // Widget management
-const { userWidgets, saveWidgets, loading: widgetsLoading } = useWidgets()
+const { userWidgets, activeWidgets, saveWidgets, loading: widgetsLoading } = useWidgets()
 
 // Widget selector state
 const showWidgetSelector = ref(false)
@@ -213,7 +223,7 @@ const selectedSize = ref('small')
 const hasConnections = computed(() => connections.value.length > 0)
 
 // Available providers
-const availableProviders = [
+const allProviders = [
   { id: 'youtube', name: 'YouTube', bgClass: 'bg-red-900/20' },
   { id: 'instagram', name: 'Instagram', bgClass: 'bg-pink-900/20' },
   { id: 'tiktok', name: 'TikTok', bgClass: 'bg-blue-900/20' },
@@ -221,55 +231,38 @@ const availableProviders = [
   { id: 'linkedin', name: 'LinkedIn', bgClass: 'bg-blue-900/20' }
 ]
 
+// Filter providers to only show connected ones
+const availableProviders = computed(() => {
+  return allProviders.filter(provider => 
+    connections.value.some(conn => conn.provider === provider.id)
+  )
+})
+
 // Widget types
 const widgetTypes = [
   { 
     id: 'line-chart', 
     name: 'Line Chart', 
-    description: 'Track changes over time',
-    icon: defineComponent({
-      template: `
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-        </svg>
-      `
-    })
+    description: 'Shows trend over time',
+    icon: 'M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z'
   },
   { 
     id: 'bar-chart', 
     name: 'Bar Chart', 
     description: 'Compare different values',
-    icon: defineComponent({
-      template: `
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      `
-    })
+    icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
   },
   { 
     id: 'heatmap', 
     name: 'Heatmap', 
     description: 'View patterns by time',
-    icon: defineComponent({
-      template: `
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-        </svg>
-      `
-    })
+    icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z'
   },
   { 
     id: 'stats-card', 
     name: 'Stats Card', 
     description: 'Show key metrics',
-    icon: defineComponent({
-      template: `
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      `
-    })
+    icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
   }
 ]
 
@@ -279,74 +272,37 @@ const availableMetrics = [
     id: 'followers', 
     name: 'Followers', 
     description: 'Total followers count',
-    icon: defineComponent({
-      template: `
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      `
-    })
+    icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'
   },
   { 
     id: 'engagement', 
     name: 'Engagement', 
     description: 'Likes, comments, shares',
-    icon: defineComponent({
-      template: `
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-        </svg>
-      `
-    })
+    icon: 'M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5'
   },
   { 
     id: 'views', 
     name: 'Views', 
     description: 'Content views',
-    icon: defineComponent({
-      template: `
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        </svg>
-      `
-    })
+    icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'
   },
   { 
     id: 'growth_rate', 
     name: 'Growth Rate', 
     description: 'Follower growth percentage',
-    icon: defineComponent({
-      template: `
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-        </svg>
-      `
-    })
+    icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'
   },
-  { 
+  {
     id: 'post_frequency', 
     name: 'Post Frequency', 
     description: 'Posts per time period',
-    icon: defineComponent({
-      template: `
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      `
-    })
+    icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
   },
-  { 
+  {
     id: 'best_times', 
     name: 'Best Times', 
     description: 'Optimal posting times',
-    icon: defineComponent({
-      template: `
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      `
-    })
+    icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
   }
 ]
 
@@ -370,23 +326,23 @@ const canAddWidget = computed(() => {
 const addWidget = async () => {
   if (!canAddWidget.value) return
   
-  const newWidget = {
-    id: uuidv4(),
-    name: `${formatProviderName(selectedProvider.value)} ${formatMetricName(selectedMetric.value)}`,
-    provider: selectedProvider.value,
-    type: selectedWidgetType.value,
-    dataKey: selectedMetric.value,
-    size: selectedSize.value,
-    color: getRandomColor(),
-    createdAt: new Date().toISOString()
-  }
-  
-  userWidgets.value.push(newWidget)
+  // Create a unique widget ID
+  const widgetId = `${selectedProvider.value}-${selectedMetric.value}-${uuidv4().substring(0, 8)}`
   
   try {
+    // Add the widget ID to the user's widgets
+    userWidgets.value.push(widgetId)
+    
+    // Save to database
     await saveWidgets()
     toast.success('Widget added successfully')
     showWidgetSelector.value = false
+    
+    // Reset selection
+    selectedProvider.value = 'all'
+    selectedWidgetType.value = 'line-chart'
+    selectedMetric.value = 'followers'
+    selectedSize.value = 'small'
   } catch (error) {
     console.error('Error saving widget:', error)
     toast.error('Failed to add widget')
@@ -396,7 +352,7 @@ const addWidget = async () => {
 
 // Remove a widget
 const removeWidget = async (widgetId) => {
-  const index = userWidgets.value.findIndex(w => w.id === widgetId)
+  const index = userWidgets.value.findIndex(id => id === widgetId)
   if (index === -1) return
   
   const removedWidget = userWidgets.value.splice(index, 1)[0]
