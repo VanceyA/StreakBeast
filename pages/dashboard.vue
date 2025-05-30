@@ -55,65 +55,14 @@
       </div>
       
       <TransitionGroup name="list" tag="div" v-else class="space-y-4">
-        <div 
-          v-for="goal in goals" 
+        <GoalCard
+          v-for="goal in goals"
           :key="goal.id"
-          class="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-all"
-        >
-          <div class="flex flex-col md:flex-row justify-between">
-            <div class="flex-1">
-              <div class="flex items-center">
-                <h3 class="text-lg font-semibold">{{ goal.title }}</h3>
-                <span v-if="goal.streak > 0" 
-                      class="ml-2 px-2 py-0.5 bg-accent-500/20 text-accent-400 text-xs rounded-full">
-                  {{ goal.streak }} day streak 🔥
-                </span>
-              </div>
-              <p class="text-gray-400 text-sm mt-1">
-                {{ goal.frequency }} • {{ goal.platform }}
-              </p>
-            </div>
-            
-            <div class="flex items-center mt-4 md:mt-0 space-x-2">
-              <span v-if="!isGoalCompletedToday(goal)" class="text-sm text-gray-400">
-                Not completed today
-              </span>
-              <span v-else class="text-sm text-green-500">
-                Completed today ✓
-              </span>
-              
-              <button 
-                v-if="!isGoalCompletedToday(goal)"
-                @click="completeGoal(goal)"
-                class="btn-success text-sm"
-              >
-                Complete
-              </button>
-              
-              <button @click="editGoal(goal)" class="text-gray-400 hover:text-white p-2">
-                <Icon name="carbon:edit" />
-              </button>
-              
-              <button @click="confirmDeleteGoal(goal)" class="text-gray-400 hover:text-red-500 p-2">
-                <Icon name="carbon:trash-can" />
-              </button>
-            </div>
-          </div>
-          
-          <!-- Progress Bar -->
-          <div class="mt-4">
-            <div class="flex justify-between text-xs text-gray-400 mb-1">
-              <span>Current Streak</span>
-              <span>Best: {{ goal.bestStreak }} days</span>
-            </div>
-            <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
-              <div 
-                class="h-full bg-accent-500 rounded-full transition-all"
-                :style="{ width: `${Math.min((goal.streak / goal.bestStreak) * 100, 100)}%` }"
-              ></div>
-            </div>
-          </div>
-        </div>
+          :goal="goal"
+          @complete="completeGoal(goal)"
+          @edit="editGoal(goal)"
+          @delete="confirmDeleteGoal(goal)"
+        />
       </TransitionGroup>
     </div>
     
@@ -213,11 +162,7 @@
                 <select id="frequency" v-model="goalForm.frequency" class="form-input" required>
                   <option value="">Select frequency</option>
                   <option value="Daily">Daily</option>
-                  <option value="Weekly (Mon)">Weekly (Monday)</option>
-                  <option value="Weekly (Wed)">Weekly (Wednesday)</option>
-                  <option value="Weekly (Fri)">Weekly (Friday)</option>
-                  <option value="Twice a week">Twice a week</option>
-                  <option value="Three times a week">Three times a week</option>
+                  <option value="Weekly">Weekly</option>
                 </select>
               </div>
               
@@ -278,9 +223,12 @@
 </template>
 
 <script setup>
+import GoalCard from '~/components/GoalCard.vue';
+
 const client = useSupabaseClient();
 const user = useSupabaseUser();
 const { $toast: toast } = useNuxtApp();
+const { isCompletedToday } = useStreak();
 
 // State
 const goals = ref([]);
@@ -353,11 +301,27 @@ const checkForAchievements = async () => {
 
 // Lifecycle
 onMounted(async () => {
-  if (user.value) {
-    await fetchGoals();
-    await loadAchievements();
-  }
+  // Check for missed streaks first
+  await checkMissedStreaks();
+  await fetchGoals();
+  await loadAchievements();
 });
+
+// Check for missed streaks and reset them
+const checkMissedStreaks = async () => {
+  if (!user.value) return;
+  
+  try {
+    const { checkMissedStreaks } = useStreak();
+    const missedGoals = await checkMissedStreaks();
+    
+    if (missedGoals && missedGoals.length > 0) {
+      toast.info(`${missedGoals.length} streak${missedGoals.length === 1 ? '' : 's'} reset due to inactivity.`);
+    }
+  } catch (error) {
+    console.error('Error checking missed streaks:', error);
+  }
+};
 
 // Methods
 const fetchGoals = async () => {
