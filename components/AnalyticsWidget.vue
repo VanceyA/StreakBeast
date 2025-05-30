@@ -69,44 +69,45 @@
           <div class="h-full w-full flex items-center justify-center">
             <div class="w-full h-full relative">
               <!-- Placeholder for actual chart implementation -->
-              <div 
-                class="absolute bottom-0 left-0 right-0 bg-opacity-20 rounded-md" 
-                :style="{
-                  height: `${getRandomHeight()}%`,
-                  backgroundColor: widget?.color || '#3b82f6',
-                  backgroundImage: `linear-gradient(to top, ${widget?.color || '#3b82f6'}22, ${widget?.color || '#3b82f6'}00)`
-                }"
-              ></div>
-              <div class="absolute bottom-0 left-0 right-0 h-px" :style="{backgroundColor: widget?.color || '#3b82f6'}"></div>
+              <div class="absolute bottom-0 left-0 right-0 h-px bg-white opacity-30"></div>
               
               <!-- Line path -->
               <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <path 
                   :d="generateRandomPath()" 
-                  :stroke="widget?.color || '#3b82f6'" 
-                  stroke-width="2" 
                   fill="none"
+                  stroke="white" 
+                  stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
+                  class="opacity-80"
                 />
+                <!-- Optional subtle gradient background -->
+                <linearGradient :id="`grad-${widget?.id || 'default'}`" x1="0%" y1="100%" x2="0%" y2="0%">
+                  <stop offset="0%" stop-color="rgba(255,255,255,0.1)" />
+                  <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+                </linearGradient>
               </svg>
               
               <!-- Current value -->
-              <div class="absolute top-2 right-2 text-2xl font-bold" :style="{color: widget?.color || '#3b82f6'}">
+              <div class="absolute top-2 right-2 text-2xl font-bold text-white">
                 {{ getCurrentValue }}
               </div>
               
               <!-- Change indicator -->
               <div class="absolute top-10 right-2 text-sm flex items-center">
-                <svg v-if="getRandomTrend() > 0" class="w-4 h-4 mr-1 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd"></path>
-                </svg>
-                <svg v-else class="w-4 h-4 mr-1 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M12 13a1 1 0 110 2H7a1 1 0 01-1-1v-5a1 1 0 112 0v2.586l4.293-4.293a1 1 0 011.414 0L16 9.586l4.293-4.293a1 1 0 111.414 1.414l-5 5a1 1 0 01-1.414 0L13 9.414 9.414 13H12z" clip-rule="evenodd"></path>
-                </svg>
-                <span :class="getRandomTrend() > 0 ? 'text-green-500' : 'text-red-500'">
-                  {{ Math.abs(getRandomTrend()).toFixed(1) }}%
-                </span>
+                <template v-if="getRandomTrend() > 0">
+                  <svg class="w-4 h-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                  <span class="text-green-500">{{ Math.abs(getRandomTrend()).toFixed(1) }}%</span>
+                </template>
+                <template v-else>
+                  <svg class="w-4 h-4 mr-1 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                  </svg>
+                  <span class="text-red-500">{{ Math.abs(getRandomTrend()).toFixed(1) }}%</span>
+                </template>
               </div>
             </div>
           </div>
@@ -158,19 +159,22 @@
             <div class="text-4xl font-bold mb-2" :style="{color: widget?.color || '#3b82f6'}">
               {{ getRandomValue() }}
             </div>
-            <div class="text-sm text-gray-400 mb-4">
-              {{ widget?.dataKey?.replace('_', ' ') || 'Metric' }}
+            <div class="text-gray-400 text-sm mb-4">
+              {{ formatMetricName(widget?.dataKey || 'metric') }}
             </div>
-            <div class="flex items-center">
-              <svg v-if="getRandomTrend() > 0" class="w-4 h-4 mr-1 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd"></path>
-              </svg>
-              <svg v-else class="w-4 h-4 mr-1 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M12 13a1 1 0 110 2H7a1 1 0 01-1-1v-5a1 1 0 112 0v2.586l4.293-4.293a1 1 0 011.414 0L16 9.586l4.293-4.293a1 1 0 111.414 1.414l-5 5a1 1 0 01-1.414 0L13 9.414 9.414 13H12z" clip-rule="evenodd"></path>
-              </svg>
-              <span :class="getRandomTrend() > 0 ? 'text-green-500' : 'text-red-500'">
-                {{ Math.abs(getRandomTrend()).toFixed(1) }}% from last period
-              </span>
+            <div class="flex items-center text-sm">
+              <template v-if="getRandomTrend() > 0">
+                <svg class="w-4 h-4 mr-1 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                <span class="text-green-500">{{ Math.abs(getRandomTrend()).toFixed(1) }}% from last period</span>
+              </template>
+              <template v-else>
+                <svg class="w-4 h-4 mr-1 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                </svg>
+                <span class="text-red-500">{{ Math.abs(getRandomTrend()).toFixed(1) }}% from last period</span>
+              </template>
             </div>
           </div>
         </template>
@@ -191,31 +195,33 @@ const props = defineProps({
   }
 })
 
-// Determine if the widget prop is a string ID or a full widget object
-const isWidgetId = computed(() => typeof props.widget === 'string')
-
-// Parse the widget ID to extract provider and metric if it's a string
+// Parse widget info from ID or use provided object
 const widgetParts = computed(() => {
-  if (!isWidgetId.value) return null
-  
-  const parts = props.widget.split('-')
-  return {
-    provider: parts[0],
-    metric: parts[1] || 'followers',
-    id: props.widget
+  if (typeof props.widget === 'string') {
+    const parts = props.widget.split('-')
+    return {
+      provider: parts[0],
+      metric: parts[1],
+      type: parts[2] || 'line-chart'
+    }
   }
+  
+  return props.widget
 })
 
-// Get the widget object - either from the prop directly or create it from the ID
+// Computed widget object with defaults
 const widget = computed(() => {
-  if (!isWidgetId.value) return props.widget
+  // Handle YouTube-specific metrics mapping
+  let dataKey = widgetParts.value.metric
+  if (widgetParts.value.provider === 'youtube' && widgetParts.value.metric === 'followers') {
+    dataKey = 'subscribers'
+  }
   
   return {
-    id: widgetParts.value.id,
-    provider: widgetParts.value.provider,
-    dataKey: widgetParts.value.metric,
+    ...widgetParts.value,
     name: `${formatProviderName(widgetParts.value.provider)} ${formatMetricName(widgetParts.value.metric)}`,
-    type: 'line-chart',
+    dataKey: dataKey,
+    type: widgetParts.value.type || 'line-chart',
     size: widgetParts.value.provider === 'all' ? 'large' : 'medium',
     color: getWidgetColor(widgetParts.value.provider)
   }
@@ -238,28 +244,44 @@ const getWidgetColor = (provider) => {
   return colorMap[provider] || '#3b82f6'
 }
 
-// Check if the provider is connected
+// Check if platform is connected
 const isConnected = computed(() => {
   const provider = typeof props.widget === 'string' ? props.widget.split('-')[0] : props.widget?.provider
-  
-  if (provider === 'all') {
-    return connections.value.length > 0
-  }
-  return connections.value.some(c => c.provider === provider)
+  return connections.value && connections.value.some(c => c.provider === provider)
 })
 
-// Check if we have data for this widget
+// Check if data is available for this widget
 const hasData = computed(() => {
-  if (!isConnected.value) return false
-  
   const provider = typeof props.widget === 'string' ? props.widget.split('-')[0] : props.widget?.provider
+  const metricKey = typeof props.widget === 'string' ? props.widget.split('-')[1] || 'followers' : props.widget?.dataKey
   
-  if (provider === 'all') {
-    return Object.keys(metrics.value).length > 0
+  // Handle YouTube-specific metrics
+  let dataKey = metricKey
+  if (provider === 'youtube' && metricKey === 'followers') {
+    dataKey = 'subscribers'
   }
   
-  // Check if we have any data for this provider
-  return !!metrics.value[provider]
+  // For debugging
+  if (provider === 'youtube') {
+    console.log('Checking YouTube data:', {
+      provider,
+      dataKey,
+      hasMetrics: !!metrics.value[provider],
+      hasDataKey: metrics.value[provider] ? !!metrics.value[provider][dataKey] : false,
+      isArray: metrics.value[provider] && metrics.value[provider][dataKey] ? Array.isArray(metrics.value[provider][dataKey]) : false,
+      length: metrics.value[provider] && metrics.value[provider][dataKey] && Array.isArray(metrics.value[provider][dataKey]) ? metrics.value[provider][dataKey].length : 0
+    })
+  }
+  
+  // If no data is available yet but we're connected, return true to show mock data
+  if (isConnected.value && !metrics.value[provider]) {
+    return true
+  }
+  
+  return metrics.value[provider] && 
+         metrics.value[provider][dataKey] && 
+         Array.isArray(metrics.value[provider][dataKey]) && 
+         metrics.value[provider][dataKey].length > 0
 })
 
 // Format provider name for display
@@ -285,6 +307,7 @@ const connect = (providerId) => {
 
 // Refresh data for this widget
 const refreshData = async () => {
+  loading.value = true;
   try {
     const provider = typeof props.widget === 'string' ? props.widget.split('-')[0] : props.widget?.provider
     
@@ -294,81 +317,35 @@ const refreshData = async () => {
         await fetchMetrics(connection.provider)
       }
     } else {
-      await fetchMetrics(provider)
+      // Fetch metrics for the specific provider
+      const data = await fetchMetrics(provider)
+      
+      // Log the fetched data for debugging
+      console.log(`Fetched ${provider} metrics:`, data)
+      
+      // If we're looking for YouTube subscribers but it's not in the data,
+      // check if we need to map it from a different field
+      if (provider === 'youtube' && 
+          widget.value.dataKey === 'subscribers' && 
+          data && 
+          !data.subscribers && 
+          data.followers) {
+        // Map followers to subscribers for YouTube
+        metrics.value = {
+          ...metrics.value,
+          [provider]: {
+            ...data,
+            subscribers: data.followers
+          }
+        }
+      }
     }
-    toast.success('Data refreshed successfully')
   } catch (error) {
     console.error('Error refreshing data:', error)
     toast.error('Failed to refresh data')
+  } finally {
+    loading.value = false;
   }
-}
-
-// Format data for the chart
-const chartData = computed(() => {
-  if (!hasData.value) return []
-  
-  if (props.widget.provider === 'all') {
-    // Format data for multi-platform widgets
-    return formatMultiPlatformData()
-  }
-  
-  // Format data for single platform widgets
-  return formatSinglePlatformData()
-})
-
-// Format data for single platform widgets
-const formatSinglePlatformData = () => {
-  const data = metrics.value[widget.value.provider][widget.value.dataKey]
-  
-  if (Array.isArray(data)) {
-    return data
-  }
-  
-  // Convert object to array if needed
-  return Object.entries(data).map(([date, value]) => ({
-    date,
-    value
-  }))
-}
-
-// Format data for multi-platform widgets
-const formatMultiPlatformData = () => {
-  if (props.widget.type === 'bar-chart') {
-    return Object.entries(metrics.value).map(([platform, data]) => ({
-      platform,
-      value: data[props.widget.dataKey]?.length 
-        ? data[props.widget.dataKey][data[props.widget.dataKey].length - 1].value 
-        : 0
-    }))
-  }
-  
-  if (props.widget.type === 'heatmap') {
-    // Format data for heatmap
-    const heatmapData = []
-    
-    for (let day = 0; day < 7; day++) {
-      for (let hour = 0; hour < 24; hour++) {
-        let value = 0
-        
-        // Aggregate engagement across platforms
-        Object.values(metrics.value).forEach(platformData => {
-          if (platformData.engagementByTime) {
-            value += platformData.engagementByTime[day]?.[hour] || 0
-          }
-        })
-        
-        heatmapData.push({
-          day,
-          hour,
-          value
-        })
-      }
-    }
-    
-    return heatmapData
-  }
-  
-  return []
 }
 
 // Get current value for the widget
@@ -378,8 +355,11 @@ const getCurrentValue = computed(() => {
   const provider = typeof props.widget === 'string' ? props.widget.split('-')[0] : props.widget?.provider
   const metricKey = typeof props.widget === 'string' ? props.widget.split('-')[1] || 'followers' : props.widget?.dataKey
   
-  // Handle YouTube subscribers as followers
-  const dataKey = metricKey === 'subscribers' && provider === 'youtube' ? 'followers' : metricKey
+  // Handle YouTube-specific metrics
+  let dataKey = metricKey
+  if (provider === 'youtube' && metricKey === 'followers') {
+    dataKey = 'subscribers'
+  }
   
   if (metrics.value[provider] && metrics.value[provider][dataKey]) {
     const data = metrics.value[provider][dataKey]
@@ -427,6 +407,7 @@ const generateRandomPath = () => {
 
 // Load data on mount
 onMounted(async () => {
+  // Force immediate data refresh when component mounts
   await refreshData()
 })
 </script>

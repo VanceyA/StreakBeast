@@ -34,8 +34,7 @@ export default defineEventHandler(async (event) => {
     
     // For now, return mock data based on the provider
     // In a real application, you would use the access_token to fetch real metrics from the provider's API
-    return {
-      followers: generateMockTimeSeriesData(provider === 'youtube' ? 'subscribers' : 'followers'),
+    let responseData = {
       engagement: generateMockTimeSeriesData('engagement'),
       views: generateMockTimeSeriesData('views'),
       likes: generateMockTimeSeriesData('likes'),
@@ -46,6 +45,23 @@ export default defineEventHandler(async (event) => {
       best_times: generateMockBestTimes(),
       demographics: generateMockDemographics(provider)
     }
+    
+    // Add provider-specific metrics
+    if (provider === 'youtube') {
+      // For YouTube, use subscribers instead of followers
+      responseData = {
+        ...responseData,
+        subscribers: generateMockTimeSeriesData('subscribers')
+      }
+    } else {
+      // For other platforms, use followers
+      responseData = {
+        ...responseData,
+        followers: generateMockTimeSeriesData('followers')
+      }
+    }
+    
+    return responseData
   } catch (error) {
     console.error(`Error fetching ${event.context.params.provider} metrics:`, error)
     return createError({

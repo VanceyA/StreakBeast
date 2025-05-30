@@ -168,20 +168,44 @@ export const useWidgets = () => {
     error.value = null
     
     try {
-      const { error: saveError } = await supabase
+      // First check if the user already has a record
+      const { data: existingData, error: fetchError } = await supabase
         .from('user_widgets')
-        .upsert({
-          user_id: user.value.id,
-          widget_ids: userWidgets.value
-        })
+        .select('*')
+        .eq('user_id', user.value.id)
+        .single();
       
-      if (saveError) throw saveError
+      let saveError;
       
-      toast.success('Dashboard layout saved')
+      if (existingData) {
+        // If record exists, update it
+        const { error: updateError } = await supabase
+          .from('user_widgets')
+          .update({
+            widget_ids: userWidgets.value,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.value.id);
+        
+        saveError = updateError;
+      } else {
+        // If no record exists, insert a new one
+        const { error: insertError } = await supabase
+          .from('user_widgets')
+          .insert({
+            user_id: user.value.id,
+            widget_ids: userWidgets.value
+          });
+        
+        saveError = insertError;
+      }
+      
+      if (saveError) throw saveError;
     } catch (err) {
       console.error('Error saving widgets:', err)
       error.value = err.message
       toast.error('Failed to save dashboard layout')
+      throw err; // Re-throw to allow calling functions to handle the error
     } finally {
       loading.value = false
     }

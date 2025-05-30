@@ -37,7 +37,7 @@
         </button>
       </div>
       
-      <div v-else-if="activeWidgets.length === 0" class="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center">
+      <div v-else-if="userWidgets.length === 0" class="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center">
         <p class="text-gray-400 mb-4">Add widgets to customize your dashboard</p>
         <button 
           @click="showWidgetSelector = true" 
@@ -52,7 +52,7 @@
           v-for="widget in userWidgets" 
           :key="widget" 
           :widget="widget"
-          @remove="removeWidget(widget)"
+          @remove="removeWidgetFromDashboard(widget)"
         />
       </div>
     </div>
@@ -188,9 +188,9 @@
         <div class="flex justify-end">
           <button @click="showWidgetSelector = false" class="btn-secondary mr-2">Cancel</button>
           <button 
-            @click="addWidget" 
-            class="btn-primary"
+            @click="addNewWidget" 
             :disabled="!canAddWidget"
+            class="btn-primary w-full"
           >
             Add Widget
           </button>
@@ -205,12 +205,10 @@ import { ref, computed, onMounted } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 
 const { $toast: toast } = useNuxtApp()
+const { connections, fetchConnections, fetchMetrics } = useSocialData()
 
-// Social data
-const { connections, loading: socialLoading } = useSocialData()
-
-// Widget management
-const { userWidgets, activeWidgets, saveWidgets, loading: widgetsLoading } = useWidgets()
+// Import useWidgets composable
+const { userWidgets, addWidget, removeWidget, saveWidgets } = useWidgets()
 
 // Widget selector state
 const showWidgetSelector = ref(false)
@@ -220,23 +218,61 @@ const selectedMetric = ref('followers')
 const selectedSize = ref('small')
 
 // Check if user has any social connections
-const hasConnections = computed(() => connections.value.length > 0)
+const hasConnections = computed(() => connections.value && connections.value.length > 0)
 
-// Available providers
-const allProviders = [
-  { id: 'youtube', name: 'YouTube', bgClass: 'bg-red-900/20' },
-  { id: 'instagram', name: 'Instagram', bgClass: 'bg-pink-900/20' },
-  { id: 'tiktok', name: 'TikTok', bgClass: 'bg-blue-900/20' },
-  { id: 'twitter', name: 'Twitter', bgClass: 'bg-blue-900/20' },
-  { id: 'linkedin', name: 'LinkedIn', bgClass: 'bg-blue-900/20' }
-]
-
-// Filter providers to only show connected ones
-const availableProviders = computed(() => {
-  return allProviders.filter(provider => 
-    connections.value.some(conn => conn.provider === provider.id)
-  )
+// Set initial selected provider to the first available provider or 'youtube' if available
+onMounted(() => {
+  if (availableProviders.value.length > 0) {
+    // If YouTube is connected, select it by default
+    const youtubeProvider = availableProviders.value.find(p => p.id === 'youtube')
+    if (youtubeProvider) {
+      selectedProvider.value = 'youtube'
+    } else {
+      selectedProvider.value = availableProviders.value[0].id
+    }
+  }
 })
+
+// Available providers - filtered based on connected accounts
+const availableProviders = computed(() => {
+  // If we have connections, only show the ones that are connected
+  if (connections.value && connections.value.length > 0) {
+    const connectedProviderIds = connections.value.map(conn => conn.provider);
+    const providers = [
+      { id: 'youtube', name: 'YouTube', bgClass: 'bg-red-900/20' },
+      { id: 'instagram', name: 'Instagram', bgClass: 'bg-purple-900/20' },
+      { id: 'twitter', name: 'Twitter', bgClass: 'bg-blue-900/20' },
+      { id: 'tiktok', name: 'TikTok', bgClass: 'bg-gray-900/20' },
+      { id: 'facebook', name: 'Facebook', bgClass: 'bg-blue-900/20' }
+    ];
+    return providers.filter(provider => connectedProviderIds.includes(provider.id));
+  }
+  return [];
+})
+
+// Process widget data for display and API interactions
+const processWidgetData = (widgetId) => {
+  const parts = widgetId.split('-')
+  const provider = parts[0]
+  const metric = parts[1]
+  const widgetType = parts[2] || 'line-chart'
+  
+  // Map YouTube-specific metrics
+  let dataKey = metric
+  if (provider === 'youtube' && metric === 'followers') {
+    dataKey = 'subscribers'
+  }
+  
+  return {
+    id: widgetId,
+    provider,
+    metric,
+    dataKey,
+    type: widgetType,
+    name: `${formatProviderName(provider)} ${formatMetricName(metric)}`,
+    color: getRandomColor()
+  }
+}
 
 // Widget types
 const widgetTypes = [
@@ -250,7 +286,7 @@ const widgetTypes = [
     id: 'bar-chart', 
     name: 'Bar Chart', 
     description: 'Compare different values',
-    icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+    icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 011-2h2a2 2 0 011 2v10m-6 0a2 2 0 01-2 2h-2a2 2 0 01-2-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
   },
   { 
     id: 'heatmap', 
@@ -323,47 +359,44 @@ const canAddWidget = computed(() => {
 })
 
 // Add a new widget
-const addWidget = async () => {
+const addNewWidget = async () => {
   if (!canAddWidget.value) return
   
-  // Create a unique widget ID
-  const widgetId = `${selectedProvider.value}-${selectedMetric.value}-${uuidv4().substring(0, 8)}`
+  // Create a unique widget ID that includes the widget type
+  const widgetId = `${selectedProvider.value}-${selectedMetric.value}-${selectedWidgetType.value}-${uuidv4().substring(0, 8)}`
   
   try {
-    // Add the widget ID to the user's widgets
-    userWidgets.value.push(widgetId)
-    
-    // Save to database
-    await saveWidgets()
+    // Add the widget using the useWidgets composable
+    await addWidget(widgetId)
     toast.success('Widget added successfully')
     showWidgetSelector.value = false
     
-    // Reset selection
-    selectedProvider.value = 'all'
+    // Reset selection but keep the provider the same if there's only one available
+    if (availableProviders.value.length === 1) {
+      selectedProvider.value = availableProviders.value[0].id
+    } else {
+      selectedProvider.value = 'all'
+    }
     selectedWidgetType.value = 'line-chart'
     selectedMetric.value = 'followers'
     selectedSize.value = 'small'
+    
+    // Fetch metrics for the selected provider to ensure data is available
+    await fetchMetrics(selectedProvider.value)
   } catch (error) {
     console.error('Error saving widget:', error)
     toast.error('Failed to add widget')
-    userWidgets.value.pop() // Remove the widget if save failed
   }
 }
 
-// Remove a widget
-const removeWidget = async (widgetId) => {
-  const index = userWidgets.value.findIndex(id => id === widgetId)
-  if (index === -1) return
-  
-  const removedWidget = userWidgets.value.splice(index, 1)[0]
-  
+// Remove a widget (wrapper for useWidgets.removeWidget)
+const removeWidgetFromDashboard = async (widgetId) => {
   try {
-    await saveWidgets()
+    await removeWidget(widgetId)
     toast.success('Widget removed')
   } catch (error) {
     console.error('Error removing widget:', error)
     toast.error('Failed to remove widget')
-    userWidgets.value.splice(index, 0, removedWidget) // Restore the widget if save failed
   }
 }
 
